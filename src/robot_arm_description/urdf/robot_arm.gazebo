@@ -1,0 +1,257 @@
+<?xml version="1.0" ?>
+<robot name="robot_arm" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+<!-- Silver color for Gazebo Harmonic (gz-sim 8) -->
+<xacro:property name="silver_r" value="0.7" />
+<xacro:property name="silver_g" value="0.7" />
+<xacro:property name="silver_b" value="0.7" />
+
+<!-- gz_ros2_control plugin -->
+<xacro:if value="$(arg use_ros2_control)">
+<gazebo>
+  <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+    <parameters>$(find robot_arm_description)/config/ros2_controllers.yaml</parameters>
+    <!-- Keep the validated upstream value for a stable arm and gripper.  The
+         mobile case now checks the settled TCP rather than rejecting a safe
+         pose solely because a joint-level controller band was missed. -->
+    <position_proportional_gain>1.2</position_proportional_gain>
+  </plugin>
+  <plugin filename="gz-sim-joint-state-publisher-system"
+          name="gz::sim::systems::JointStatePublisher">
+    <joint_name>revolute_1</joint_name>
+    <joint_name>revolute_2</joint_name>
+    <joint_name>revolute_3</joint_name>
+    <joint_name>revolute_4</joint_name>
+    <joint_name>revolute_5</joint_name>
+    <joint_name>revolute_6</joint_name>
+    <joint_name>slider_7</joint_name>
+    <joint_name>slider_8</joint_name>
+  </plugin>
+</gazebo>
+</xacro:if>
+
+<!-- Festival default: independent Gazebo position setpoints.  Unlike a
+     pre-planned JointTrajectory, these controllers are designed for live
+     joystick targets that can change continuously. -->
+<xacro:macro name="festival_position_controller"
+             params="joint initial p i d i_limit effort_limit">
+  <plugin filename="gz-sim-joint-position-controller-system"
+          name="gz::sim::systems::JointPositionController">
+    <joint_name>${joint}</joint_name>
+    <topic>/reactor_180/joint/${joint}/cmd_pos</topic>
+    <initial_position>${initial}</initial_position>
+    <p_gain>${p}</p_gain>
+    <i_gain>${i}</i_gain>
+    <d_gain>${d}</d_gain>
+    <i_min>-${i_limit}</i_min>
+    <i_max>${i_limit}</i_max>
+    <cmd_min>-${effort_limit}</cmd_min>
+    <cmd_max>${effort_limit}</cmd_max>
+  </plugin>
+</xacro:macro>
+
+<xacro:if value="$(arg use_native_control)">
+<gazebo>
+  <xacro:festival_position_controller joint="revolute_1" initial="1.570796"
+      p="20" i="0.03" d="0.15" i_limit="0.5" effort_limit="40"/>
+  <xacro:festival_position_controller joint="revolute_2" initial="0.0"
+      p="30" i="0.08" d="0.35" i_limit="1" effort_limit="90"/>
+  <xacro:festival_position_controller joint="revolute_3" initial="0.0"
+      p="24" i="0.06" d="0.25" i_limit="1" effort_limit="80"/>
+  <xacro:festival_position_controller joint="revolute_4" initial="0"
+      p="8" i="0.01" d="0.08" i_limit="0.3" effort_limit="8"/>
+  <xacro:festival_position_controller joint="revolute_5" initial="-1.629538"
+      p="10" i="0.01" d="0.10" i_limit="0.3" effort_limit="10"/>
+  <xacro:festival_position_controller joint="revolute_6" initial="0"
+      p="7" i="0.01" d="0.06" i_limit="0.3" effort_limit="6"/>
+  <xacro:festival_position_controller joint="slider_7" initial="0.040"
+      p="35" i="0" d="0.08" i_limit="0.1" effort_limit="12"/>
+  <xacro:festival_position_controller joint="slider_8" initial="-0.040"
+      p="35" i="0" d="0.08" i_limit="0.1" effort_limit="12"/>
+    <xacro:if value="$(arg enable_game_assets)">
+      <xacro:festival_position_controller joint="held_core_visibility_joint" initial="0.0"
+        p="15" i="0" d="0.08" i_limit="0.1" effort_limit="2"/>
+    </xacro:if>
+  <plugin filename="gz-sim-joint-state-publisher-system"
+          name="gz::sim::systems::JointStatePublisher">
+    <joint_name>revolute_1</joint_name>
+    <joint_name>revolute_2</joint_name>
+    <joint_name>revolute_3</joint_name>
+    <joint_name>revolute_4</joint_name>
+    <joint_name>revolute_5</joint_name>
+    <joint_name>revolute_6</joint_name>
+    <joint_name>slider_7</joint_name>
+    <joint_name>slider_8</joint_name>
+    <xacro:if value="$(arg enable_game_assets)">
+      <joint_name>held_core_visibility_joint</joint_name>
+    </xacro:if>
+  </plugin>
+</gazebo>
+
+<xacro:if value="$(arg enable_game_assets)">
+<gazebo reference="held_core_visual_link">
+  <visual>
+    <material>
+      <ambient>0.02 0.42 1.0 1.0</ambient>
+      <diffuse>0.04 0.78 1.0 1.0</diffuse>
+      <specular>0.78 0.92 1.0 1.0</specular>
+      <emissive>0.01 0.32 0.86 1.0</emissive>
+      <pbr><metal><metalness>0.42</metalness><roughness>0.18</roughness></metal></pbr>
+    </material>
+  </visual>
+  <gravity>false</gravity>
+  <self_collide>false</self_collide>
+</gazebo>
+</xacro:if>
+</xacro:if>
+
+<gazebo reference="base_link">
+  <visual>
+    <material>
+      <ambient>${silver_r} ${silver_g} ${silver_b} 1.0</ambient>
+      <diffuse>${silver_r} ${silver_g} ${silver_b} 1.0</diffuse>
+      <specular>0.9 0.9 0.9 1.0</specular>
+    </material>
+  </visual>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <xacro:if value="$(arg use_native_control)"><self_collide>true</self_collide></xacro:if>
+  <xacro:unless value="$(arg use_native_control)"><self_collide>false</self_collide></xacro:unless>
+  <gravity>true</gravity>
+</gazebo>
+
+<gazebo reference="shoulder_link_v2_1">
+  <visual>
+    <material>
+      <!-- Keep the complete arm in the same clean silver finish. -->
+      <ambient>${silver_r} ${silver_g} ${silver_b} 1.0</ambient>
+      <diffuse>${silver_r} ${silver_g} ${silver_b} 1.0</diffuse>
+      <specular>0.9 0.9 0.9 1.0</specular>
+    </material>
+  </visual>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <xacro:if value="$(arg use_native_control)"><self_collide>true</self_collide></xacro:if>
+  <xacro:unless value="$(arg use_native_control)"><self_collide>false</self_collide></xacro:unless>
+</gazebo>
+
+<gazebo reference="upper_arm_link_v2_1">
+  <visual>
+    <material>
+      <ambient>${silver_r} ${silver_g} ${silver_b} 1.0</ambient>
+      <diffuse>${silver_r} ${silver_g} ${silver_b} 1.0</diffuse>
+      <specular>0.9 0.9 0.9 1.0</specular>
+    </material>
+  </visual>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <xacro:if value="$(arg use_native_control)"><self_collide>true</self_collide></xacro:if>
+  <xacro:unless value="$(arg use_native_control)"><self_collide>false</self_collide></xacro:unless>
+</gazebo>
+
+<gazebo reference="elbow_link_v2_1">
+  <visual>
+    <material>
+      <!-- Match the neighbouring links instead of marking this axis cyan. -->
+      <ambient>${silver_r} ${silver_g} ${silver_b} 1.0</ambient>
+      <diffuse>${silver_r} ${silver_g} ${silver_b} 1.0</diffuse>
+      <specular>0.9 0.9 0.9 1.0</specular>
+    </material>
+  </visual>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <xacro:if value="$(arg use_native_control)"><self_collide>true</self_collide></xacro:if>
+  <xacro:unless value="$(arg use_native_control)"><self_collide>false</self_collide></xacro:unless>
+</gazebo>
+
+<gazebo reference="lower_link_v2_1">
+  <visual>
+    <material>
+      <ambient>${silver_r} ${silver_g} ${silver_b} 1.0</ambient>
+      <diffuse>${silver_r} ${silver_g} ${silver_b} 1.0</diffuse>
+      <specular>0.9 0.9 0.9 1.0</specular>
+    </material>
+  </visual>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <xacro:if value="$(arg use_native_control)"><self_collide>true</self_collide></xacro:if>
+  <xacro:unless value="$(arg use_native_control)"><self_collide>false</self_collide></xacro:unless>
+</gazebo>
+
+<gazebo reference="wrist_link_v1_1">
+  <visual>
+    <material>
+      <ambient>${silver_r} ${silver_g} ${silver_b} 1.0</ambient>
+      <diffuse>${silver_r} ${silver_g} ${silver_b} 1.0</diffuse>
+      <specular>0.9 0.9 0.9 1.0</specular>
+    </material>
+  </visual>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <xacro:if value="$(arg use_native_control)"><self_collide>true</self_collide></xacro:if>
+  <xacro:unless value="$(arg use_native_control)"><self_collide>false</self_collide></xacro:unless>
+</gazebo>
+
+<gazebo reference="gripper_link_v2_1">
+  <visual>
+    <material>
+      <ambient>${silver_r} ${silver_g} ${silver_b} 1.0</ambient>
+      <diffuse>${silver_r} ${silver_g} ${silver_b} 1.0</diffuse>
+      <specular>0.9 0.9 0.9 1.0</specular>
+    </material>
+  </visual>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <xacro:if value="$(arg use_native_control)"><self_collide>true</self_collide></xacro:if>
+  <xacro:unless value="$(arg use_native_control)"><self_collide>false</self_collide></xacro:unless>
+</gazebo>
+
+<gazebo reference="jaw_one_v1_1">
+  <visual>
+    <material>
+      <ambient>${silver_r} ${silver_g} ${silver_b} 1.0</ambient>
+      <diffuse>${silver_r} ${silver_g} ${silver_b} 1.0</diffuse>
+      <specular>0.9 0.9 0.9 1.0</specular>
+    </material>
+  </visual>
+  <mu1>2.8</mu1>
+  <mu2>2.8</mu2>
+  <sensor name="jaw_one_contact" type="contact">
+    <always_on>true</always_on>
+    <update_rate>100</update_rate>
+    <contact>
+      <collision>jaw_one_v1_1_fixed_joint_lump__jaw_one_inner_contact_collision_collision</collision>
+      <topic>/jaw_one/contacts</topic>
+    </contact>
+  </sensor>
+  <self_collide>false</self_collide>
+  <gravity>false</gravity>
+  <kp>1000000.0</kp>
+  <kd>50.0</kd>
+</gazebo>
+
+<gazebo reference="jaw_two_v1_1">
+  <visual>
+    <material>
+      <ambient>${silver_r} ${silver_g} ${silver_b} 1.0</ambient>
+      <diffuse>${silver_r} ${silver_g} ${silver_b} 1.0</diffuse>
+      <specular>0.9 0.9 0.9 1.0</specular>
+    </material>
+  </visual>
+  <mu1>2.8</mu1>
+  <mu2>2.8</mu2>
+  <sensor name="jaw_two_contact" type="contact">
+    <always_on>true</always_on>
+    <update_rate>100</update_rate>
+    <contact>
+      <collision>jaw_two_v1_1_fixed_joint_lump__jaw_two_inner_contact_collision_collision</collision>
+      <topic>/jaw_two/contacts</topic>
+    </contact>
+  </sensor>
+  <self_collide>false</self_collide>
+  <gravity>false</gravity>
+  <kp>1000000.0</kp>
+  <kd>50.0</kd>
+</gazebo>
+
+</robot>

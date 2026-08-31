@@ -1,0 +1,90 @@
+schema_version = 1
+
+# llama.cpp publishes signed/attested rolling binaries. b10566 is the official
+# Ubuntu Vulkan artifact built from the same commit as the v0.2.0 semantic tag.
+# Vulkan keeps this installation user-local and does not replace the working
+# NVIDIA driver or require a global CUDA Toolkit.
+[llama_cpp]
+release = "b10566"
+version = "v0.2.0"
+commit = "bb4caa7540188872173c44d161602d9271386413"
+backend = "vulkan"
+asset_name = "llama-b10566-bin-ubuntu-vulkan-x64.tar.gz"
+asset_url = "https://github.com/ggml-org/llama.cpp/releases/download/b10566/llama-b10566-bin-ubuntu-vulkan-x64.tar.gz"
+asset_sha256 = "773b3445348b5527dfe1601a7a37d9cf0e144a1023eee115351334bdb851b164"
+asset_size = 33296263
+extract_dir = "llama-b10566"
+server_relpath = "llama-server"
+cli_relpath = "llama-cli"
+bench_relpath = "llama-bench"
+attestation_url = "https://github.com/ggml-org/llama.cpp/attestations/42207505"
+
+# Qwen publishes the official base weights. The GGUF is a pinned community
+# conversion of that base. Never replace the revision with "main".
+[model]
+base_repo = "Qwen/Qwen3.5-9B"
+base_revision = "c202236235762e1c871ad0ccb60c8ee5ba337b9a"
+repo = "unsloth/Qwen3.5-9B-GGUF"
+revision = "3885219b6810b007914f3a7950a8d1b469d598a5"
+file = "Qwen3.5-9B-Q4_K_M.gguf"
+url = "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/3885219b6810b007914f3a7950a8d1b469d598a5/Qwen3.5-9B-Q4_K_M.gguf"
+sha256 = "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8"
+size = 5680522464
+quantization = "Q4_K_M"
+license = "Apache-2.0"
+text_only = true
+
+[server]
+host = "127.0.0.1"
+port = 18080
+api_base_path = "/v1"
+health_path = "/health"
+alias = "enro-qwen35-9b-q4km"
+ctx_size = 4096
+parallel = 1
+batch_size = 1024
+ubatch_size = 512
+gpu_layers = "all"
+flash_attention = "auto"
+cache_type_k = "f16"
+cache_type_v = "f16"
+jinja = true
+reasoning = "off"
+mmproj = false
+webui = false
+slots_endpoint = false
+offline = true
+health_timeout_seconds = 180
+warmup_timeout_seconds = 120
+shutdown_timeout_seconds = 15
+
+# The game imports py_trees at runtime. Keep this pinned runtime separate from
+# the repository's uv-managed development .venv: install only under
+# v2/.deps/game-python with --no-index/--no-deps after SHA-256 verification.
+[python]
+version = "3.12"
+venv_dir = ".deps/game-python"
+
+[[python.wheels]]
+name = "pyparsing"
+version = "3.2.3"
+file = "pyparsing-3.2.3-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/05/e7/df2285f3d08fee213f2d041540fa4fc9ca6c2d44cf36d3a035bf2a8d2bcc/pyparsing-3.2.3-py3-none-any.whl"
+sha256 = "a749938e02d6fd0b59b356ca504a24982314bb090c383e3cf201c95ef7e2bfcf"
+size = 111120
+
+[[python.wheels]]
+name = "pydot"
+version = "4.0.1"
+file = "pydot-4.0.1-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/7e/32/a7125fb28c4261a627f999d5fb4afff25b523800faed2c30979949d6facd/pydot-4.0.1-py3-none-any.whl"
+sha256 = "869c0efadd2708c0be1f916eb669f3d664ca684bc57ffb7ecc08e70d5e93fee6"
+size = 37087
+
+[[python.wheels]]
+name = "py_trees"
+version = "2.5.0"
+file = "py_trees-2.5.0-py2.py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/61/99/afa1e1b93e953a878ba877243b8ab296e83e9d93b8259ca30d90bda9fc02/py_trees-2.5.0-py2.py3-none-any.whl"
+sha256 = "dfba364075cbf4706623454daace2961162fa98c3f3d062bd5af5098aac17127"
+size = 145771

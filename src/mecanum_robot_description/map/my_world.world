@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <world name="default">
+
+    <light name="light" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.5 0.5 0.5 1</specular>
+      <pose>0 0 10 0 0 0</pose>
+      <direction>-0.2 -0.2 -1</direction>
+      <cast_shadows>true</cast_shadows>
+      <attenuation>
+        <range>100</range>
+        <constant>1.0</constant>
+        <linear>0.0</linear>
+        <quadratic>0.0</quadratic>
+      </attenuation>
+    </light>
+
+    <model name="my_map">
+      <static>true</static>
+      <link name="environment">
+        <visual name="env_visual">
+          <geometry>
+            <mesh>
+              <!-- glb dosyasini nereye koyduysaniz onun adresini yazin -->
+              <uri>meshes/map.glb</uri>
+            </mesh>
+          </geometry>
+        </visual>
+
+        <collision name="env_collision">
+          <geometry>
+            <mesh>
+              <!-- glb dosyasini nereye koyduysaniz onun adresini yazin -->
+              <uri>meshes/map.glb</uri>
+            </mesh>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+  </world>
+</sdf>

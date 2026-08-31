@@ -1,0 +1,35 @@
+# Maps MoveIt planning groups to the ros2_control controllers running in Gazebo.
+# Both controllers are JointTrajectoryControllers -> FollowJointTrajectory action.
+moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
+
+trajectory_execution:
+  # Relaxed tolerance: Gazebo joint state latency causes small discrepancies
+  allowed_start_tolerance: 0.15
+  # Wait for trajectory to complete before sending the next goal
+  wait_for_trajectory_completion: true
+  execution_duration_monitoring: false
+
+moveit_simple_controller_manager:
+  controller_names:
+    - arm_controller
+    - gripper_controller
+
+  arm_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints:
+      - revolute_1
+      - revolute_2
+      - revolute_3
+      - revolute_4
+      - revolute_5
+      - revolute_6
+
+  gripper_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints:
+      - slider_7
+      - slider_8

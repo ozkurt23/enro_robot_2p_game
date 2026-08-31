@@ -1,0 +1,245 @@
+<?xml  version="1.0" ?>
+<sdf version="1.7">
+  <world name="empty_robot_world">
+    <!-- System plugins -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
+
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <atmosphere type="adiabatic"/>
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <sky/>
+    </scene>
+    <light type="directional" name="sun">
+      <direction>-0.5 0.1 -0.9</direction>
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+    </light>
+    <model name='ground_plane'>
+      <static>true</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <!-- Zemini her yönde kaymaz yapıyoruz -->
+                <mu>1000.0</mu>
+                <mu2>1000.0</mu2>
+              </ode>
+            </friction>
+            <contact>
+              <ode>
+                <!-- Ağır robotun zeminde titremesini engeller -->
+                <kp>10000000.0</kp>
+                <kd>1.0</kd>
+              </ode>
+            </contact>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <!-- ====== WALLS (10x10 m oda) ====== -->
+    <model name="wall_north">
+      <static>true</static>
+      <pose>0 5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>10 0.2 1.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>10 0.2 1.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_south">
+      <static>true</static>
+      <pose>0 -5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>10 0.2 1.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>10 0.2 1.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_east">
+      <static>true</static>
+      <pose>5 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.2 10 1.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.2 10 1.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_west">
+      <static>true</static>
+      <pose>-5 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.2 10 1.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.2 10 1.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===== TABLE 1: RED CUBE (-3, 0) ===== -->
+    <model name="table_red">
+      <pose>-3.0 0.0 0.3 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.6 0.6 0.6</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.6 0.6 0.6</size></box></geometry>
+          <material>
+            <ambient>0.4 0.2 0.0 1</ambient>
+            <diffuse>0.4 0.2 0.0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="red_cube">
+      <pose>-3.0 0.0 0.675 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.1</mass>
+          <inertia><ixx>3.75e-5</ixx><iyy>3.75e-5</iyy><izz>3.75e-5</izz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.1 0.1 0.05</size></box></geometry>
+          <surface>
+            <contact><ode><max_vel>0.01</max_vel><min_depth>0.003</min_depth></ode></contact>
+            <friction><ode><mu>5.0</mu><mu2>5.0</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 0.1 0.05</size></box></geometry>
+          <material><ambient>1 0 0 1</ambient><diffuse>1 0 0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===== TABLE 2: BLUE CUBE (3, 0) ===== -->
+    <model name="table_blue">
+      <pose>3.0 0.0 0.3 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.6 0.6 0.6</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.6 0.6 0.6</size></box></geometry>
+          <material>
+            <ambient>0.4 0.2 0.0 1</ambient>
+            <diffuse>0.4 0.2 0.0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="blue_cube">
+      <pose>3.0 0.0 0.675 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.1</mass>
+          <inertia><ixx>3.75e-5</ixx><iyy>3.75e-5</iyy><izz>3.75e-5</izz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.1 0.1 0.05</size></box></geometry>
+          <surface>
+            <contact><ode><max_vel>0.01</max_vel><min_depth>0.003</min_depth></ode></contact>
+            <friction><ode><mu>5.0</mu><mu2>5.0</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 0.1 0.05</size></box></geometry>
+          <material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===== TABLE 3: GREEN CUBE (0, 3) ===== -->
+    <model name="table_green">
+      <pose>0.0 3.0 0.3 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.6 0.6 0.6</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.6 0.6 0.6</size></box></geometry>
+          <material>
+            <ambient>0.4 0.2 0.0 1</ambient>
+            <diffuse>0.4 0.2 0.0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="green_cube">
+      <pose>0.0 3.0 0.675 0 0 1.5708</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.1</mass>
+          <inertia><ixx>3.75e-5</ixx><iyy>3.75e-5</iyy><izz>3.75e-5</izz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.1 0.1 0.05</size></box></geometry>
+          <surface>
+            <contact><ode><max_vel>0.01</max_vel><min_depth>0.003</min_depth></ode></contact>
+            <friction><ode><mu>5.0</mu><mu2>5.0</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 0.1 0.05</size></box></geometry>
+          <material><ambient>0 1 0 1</ambient><diffuse>0 1 0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===== TABLE 4: STACK ZONE (0, -3) ===== -->
+    <model name="table_stack">
+      <pose>0.0 -3.0 0.3 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.6 0.6 0.6</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.6 0.6 0.6</size></box></geometry>
+          <material>
+            <ambient>0.3 0.15 0.0 1</ambient>
+            <diffuse>0.3 0.15 0.0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

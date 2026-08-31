@@ -1,0 +1,81 @@
+<?xml version="1.0" ?>
+<robot name="robot_arm" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+<ros2_control name="GazeboSimSystem" type="system">
+  <hardware>
+    <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+  </hardware>
+
+  <joint name="revolute_1">
+    <command_interface name="position"/>
+    <state_interface name="position">
+      <xacro:if value="$(arg mobile_case_initial)"><param name="initial_value">1.35963</param></xacro:if>
+      <xacro:unless value="$(arg mobile_case_initial)"><param name="initial_value">0.0</param></xacro:unless>
+    </state_interface>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="revolute_2">
+    <command_interface name="position"/>
+    <state_interface name="position">
+      <xacro:if value="$(arg mobile_case_initial)"><param name="initial_value">0.22446</param></xacro:if>
+      <xacro:unless value="$(arg mobile_case_initial)"><param name="initial_value">0.6</param></xacro:unless>
+    </state_interface>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="revolute_3">
+    <command_interface name="position"/>
+    <state_interface name="position">
+      <xacro:if value="$(arg mobile_case_initial)"><param name="initial_value">-0.87143</param></xacro:if>
+      <xacro:unless value="$(arg mobile_case_initial)"><param name="initial_value">-1.0</param></xacro:unless>
+    </state_interface>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="revolute_4">
+    <command_interface name="position"/>
+    <state_interface name="position">
+      <xacro:if value="$(arg mobile_case_initial)"><param name="initial_value">-1.46100</param></xacro:if>
+      <xacro:unless value="$(arg mobile_case_initial)"><param name="initial_value">0.0</param></xacro:unless>
+    </state_interface>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="revolute_5">
+    <command_interface name="position"/>
+    <state_interface name="position">
+      <xacro:if value="$(arg mobile_case_initial)"><param name="initial_value">1.41183</param></xacro:if>
+      <xacro:unless value="$(arg mobile_case_initial)"><param name="initial_value">0.8</param></xacro:unless>
+    </state_interface>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="revolute_6">
+    <command_interface name="position"/>
+    <state_interface name="position">
+      <xacro:if value="$(arg mobile_case_initial)"><param name="initial_value">0.91625</param></xacro:if>
+      <xacro:unless value="$(arg mobile_case_initial)"><param name="initial_value">0.0</param></xacro:unless>
+    </state_interface>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="slider_7">
+    <command_interface name="position"/>
+    <state_interface name="position">
+      <param name="initial_value">0.040</param>
+    </state_interface>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="slider_8">
+    <command_interface name="position"/>
+    <state_interface name="position">
+      <param name="initial_value">-0.040</param>
+    </state_interface>
+    <state_interface name="velocity"/>
+  </joint>
+
+</ros2_control>
+
+</robot>

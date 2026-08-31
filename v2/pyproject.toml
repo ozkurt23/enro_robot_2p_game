@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "enro-terminal-game"
+version = "0.1.0"
+description = "ENRO V2: local-Qwen terminal persona game with deterministic behaviour trees"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+authors = [{ name = "ENRO Team" }]
+dependencies = [
+  "py_trees==2.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9",
+]
+
+[project.scripts]
+enro-terminal = "enro_terminal.cli:main"
+enro-terminal-doctor = "enro_terminal.doctor:main"
+enro-terminal-eval = "enro_terminal.eval_nlu:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+enro_terminal = [
+  "persona_configs/*.toml",
+  "gameplay_configs/*.toml",
+  "data/*.jsonl",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+markers = [
+  "live_model: requires a running local llama-server",
+]

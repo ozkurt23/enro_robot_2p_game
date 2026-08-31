@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<robot name="robot_arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Single source of truth: reuse the description package's robot.
+       The <gazebo> and <ros2_control> tags inside are ignored by MoveIt's
+       URDF/RobotModel parser, so this is safe to load for planning. -->
+  <xacro:include filename="$(find robot_arm_description)/urdf/robot_arm.xacro" />
+</robot>

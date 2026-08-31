@@ -1,0 +1,233 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="pick_place_world">
+    <!-- Gravity aktif: gerçek fizik pick-and-place için gerekli -->
+    <gravity>0 0 -9.81</gravity>
+    <physics name="1ms" type="bullet">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics">
+      <engine>
+        <filename>gz-physics-bullet-featherstone-plugin</filename>
+      </engine>
+    </plugin>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- Zemin -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1.0</mu>
+                <mu2>1.0</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.6 0.6 0.6 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===== KAYNAK MASA (robot'un sağında, -Y yönünde) =====
+         Tabla küpün altında, +Y yandan yaklaşma koridorunu açık bırakacak
+         biçimde x=0.85, y=-0.40 merkezine kaydırılmıştır.
+         Tablonun üst yüzeyi: z = 0.39 + 0.02 = 0.41 m
+         Küp bu yüzeyin üzerinde: z_merkez = 0.41 + 0.025 = 0.435 m -->
+    <model name="source_table">
+      <pose>0 0 0 0 0 0</pose>
+      <static>true</static>
+
+      <!-- Masa yüzeyi (tabla) -->
+      <link name="top">
+        <pose>0.85 -0.40 0.39 0 0 0</pose>
+        <collision name="collision">
+          <geometry><box><size>0.24 0.18 0.04</size></box></geometry>
+          <surface>
+            <friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.24 0.18 0.04</size></box></geometry>
+          <material>
+            <ambient>0.55 0.28 0.07 1</ambient>
+            <diffuse>0.55 0.28 0.07 1</diffuse>
+            <specular>0.1 0.06 0.01 1</specular>
+          </material>
+        </visual>
+        <sensor name="source_table_contact" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <topic>/source_table/contacts</topic>
+          <contact><collision>collision</collision></contact>
+        </sensor>
+      </link>
+
+      <!-- Masa ayağı -->
+      <link name="leg">
+        <pose>0.85 -0.40 0.185 0 0 0</pose>
+        <collision name="collision">
+          <geometry><box><size>0.08 0.08 0.37</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.08 0.08 0.37</size></box></geometry>
+          <material>
+            <ambient>0.30 0.15 0.04 1</ambient>
+            <diffuse>0.30 0.15 0.04 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <joint name="top_to_leg" type="fixed">
+        <parent>top</parent>
+        <child>leg</child>
+      </joint>
+    </model>
+
+    <!-- ===== HEDEF MASA (robot'un solunda, +Y yönünde) =====
+         Kaynakla aynı +Y yaklaşma yönünü kullanmak ve taşıma sırasında bileği
+         döndürmemek ve bırakma düzeltmesine erişim payı bırakmak için tabla
+         Göreve uygun küçük hedef sehpası x=0.65, y=+0.30 merkezindedir.
+         0.10 x 0.08 m tabla 5 cm küpü tam destekler. Üst yüzey z=0.46
+         yapılarak pozitif-Y kol duruşundaki lower_link düzleminden ayrılır. -->
+    <model name="target_table">
+      <pose>0 0 0 0 0 0</pose>
+      <static>true</static>
+
+      <!-- Masa yüzeyi -->
+      <link name="top">
+        <pose>0.65 0.30 0.44 0 0 0</pose>
+        <collision name="collision">
+          <geometry><box><size>0.10 0.08 0.04</size></box></geometry>
+          <surface>
+            <friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.10 0.08 0.04</size></box></geometry>
+          <material>
+            <ambient>0.10 0.20 0.50 1</ambient>
+            <diffuse>0.10 0.20 0.50 1</diffuse>
+            <specular>0.05 0.10 0.25 1</specular>
+          </material>
+        </visual>
+        <sensor name="target_table_contact" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <topic>/target_table/contacts</topic>
+          <contact><collision>collision</collision></contact>
+        </sensor>
+      </link>
+
+      <!-- Masa ayağı -->
+      <link name="leg">
+        <pose>0.65 0.30 0.21 0 0 0</pose>
+        <collision name="collision">
+          <geometry><box><size>0.05 0.05 0.42</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.05 0.05 0.42</size></box></geometry>
+          <material>
+            <ambient>0.05 0.10 0.28 1</ambient>
+            <diffuse>0.05 0.10 0.28 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <joint name="top_to_leg" type="fixed">
+        <parent>top</parent>
+        <child>leg</child>
+      </joint>
+    </model>
+
+    <!-- ===== KAVRANACAK KÜP =====
+         Kaynak masa yüzeyi: z=0.41 m. Küp boyutu: 5 cm.
+         Küp merkezi: z = 0.41 + 0.025 = 0.435 m -->
+    <model name="red_cube">
+      <static>false</static>
+      <pose>0.85 -0.35 0.435 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.03</mass>
+          <inertia>
+            <ixx>0.0000417</ixx><iyy>0.0000417</iyy><izz>0.0000417</izz>
+            <ixy>0</ixy><iyz>0</iyz><ixz>0</ixz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.05 0.05 0.05</size></box></geometry>
+          <surface>
+            <friction>
+              <ode><mu>2.0</mu><mu2>2.0</mu2></ode>
+            </friction>
+            <contact>
+              <ode>
+                <kp>1e6</kp>
+                <kd>1e2</kd>
+              </ode>
+            </contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.05 0.05 0.05</size></box></geometry>
+          <material>
+            <ambient>0.9 0.15 0.05 1</ambient>
+            <diffuse>0.9 0.15 0.05 1</diffuse>
+            <specular>0.3 0.05 0.01 1</specular>
+          </material>
+        </visual>
+      </link>
+      <!-- Bu modelin canonical link pozunu ayrı ve adlandırılmış bir topic'te
+           yayınla; terminal fiziksel kavrama/lift doğrulamasını bu veriden
+           yapar. -->
+      <plugin filename="gz-sim-odometry-publisher-system"
+              name="gz::sim::systems::OdometryPublisher">
+        <dimensions>3</dimensions>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>red_cube</robot_base_frame>
+        <odom_topic>/red_cube/odometry</odom_topic>
+        <odom_publish_frequency>100</odom_publish_frequency>
+      </plugin>
+    </model>
+
+  </world>
+</sdf>

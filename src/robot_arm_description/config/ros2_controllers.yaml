@@ -1,0 +1,62 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 100
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    gripper_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+arm_controller:
+  ros__parameters:
+    joints:
+      - revolute_1
+      - revolute_2
+      - revolute_3
+      - revolute_4
+      - revolute_5
+      - revolute_6
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 3.0
+      # 0.0 disables mid-trajectory aborts; final goals remain strict and the
+      # PP node independently verifies the measured joint positions.
+      revolute_1: {trajectory: 0.0, goal: 0.008}
+      revolute_2: {trajectory: 0.0, goal: 0.008}
+      revolute_3: {trajectory: 0.0, goal: 0.008}
+      revolute_4: {trajectory: 0.0, goal: 0.008}
+      revolute_5: {trajectory: 0.0, goal: 0.008}
+      # Bilek yönü PP'de yalnız gripper yaklaşımını belirler. Gazebo position
+      # controller bu eksende birkaç derecelik yerleşme hatasıyla goal_time'a
+      # takılabiliyor; bunu hata saymak kavrama öncesi gereksiz retry/titreme
+      # üretiyor. Diğer beş eksenin hassasiyeti değişmez.
+      revolute_6: {trajectory: 0.0, goal: 0.035}
+
+gripper_controller:
+  ros__parameters:
+    joints:
+      - slider_7
+      - slider_8
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    constraints:
+      stopped_velocity_tolerance: 0.02
+      goal_time: 3.0
+      # Açılmada iki çenenin simetrik kalması için controller hedef toleransı
+      # sıkıdır. 50 mm küpte kapanış teması q≈0.0'da, hedef de q=0.0'dır;
+      # temas kaynaklı controller sonucu terminal düğümü tarafından ölçülen
+      # çene açıklığı + fiziksel lift ile ayrıca değerlendirilir.
+      slider_7: {trajectory: 0.012, goal: 0.003}
+      slider_8: {trajectory: 0.012, goal: 0.003}

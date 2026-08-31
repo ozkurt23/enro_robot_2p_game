@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Semantic description for MoveIt: planning groups, states, end effector, collision matrix -->
+<robot name="robot_arm">
+
+  <!-- ===================== Planning groups ===================== -->
+  <group name="arm">
+    <chain base_link="arm_base_link" tip_link="grasp_frame" />
+  </group>
+
+  <group name="gripper">
+    <joint name="slider_7" />
+    <joint name="slider_8" />
+  </group>
+
+  <!-- ===================== Named states ===================== -->
+  <group_state name="home" group="arm">
+    <joint name="revolute_1" value="0" />
+    <joint name="revolute_2" value="0" />
+    <joint name="revolute_3" value="0" />
+    <joint name="revolute_4" value="0" />
+    <joint name="revolute_5" value="0" />
+    <joint name="revolute_6" value="0" />
+  </group_state>
+
+  <group_state name="ready" group="arm">
+    <joint name="revolute_1" value="0" />
+    <joint name="revolute_2" value="0.6" />
+    <joint name="revolute_3" value="-1.0" />
+    <joint name="revolute_4" value="0" />
+    <joint name="revolute_5" value="0.8" />
+    <joint name="revolute_6" value="0" />
+  </group_state>
+
+  <group_state name="open" group="gripper">
+    <joint name="slider_7" value="0.04" />
+    <joint name="slider_8" value="-0.04" />
+  </group_state>
+
+  <group_state name="closed" group="gripper">
+    <joint name="slider_7" value="0.0" />
+    <joint name="slider_8" value="0.0" />
+  </group_state>
+
+  <!-- ===================== End effector ===================== -->
+  <end_effector name="gripper" parent_link="gripper_link_v2_1" group="gripper" />
+
+  <!-- ===================== Disable collisions (adjacent / never) ===================== -->
+  <disable_collisions link1="arm_base_link" link2="shoulder_link_v2_1" reason="Adjacent" />
+  <disable_collisions link1="shoulder_link_v2_1" link2="upper_arm_link_v2_1" reason="Adjacent" />
+  <disable_collisions link1="upper_arm_link_v2_1" link2="elbow_link_v2_1" reason="Adjacent" />
+  <disable_collisions link1="elbow_link_v2_1" link2="lower_link_v2_1" reason="Adjacent" />
+  <disable_collisions link1="lower_link_v2_1" link2="wrist_link_v1_1" reason="Adjacent" />
+  <disable_collisions link1="wrist_link_v1_1" link2="gripper_link_v2_1" reason="Adjacent" />
+  <disable_collisions link1="gripper_link_v2_1" link2="jaw_one_v1_1" reason="Adjacent" />
+  <disable_collisions link1="gripper_link_v2_1" link2="jaw_two_v1_1" reason="Adjacent" />
+  <disable_collisions link1="gripper_link_v2_1" link2="grasp_frame" reason="Adjacent" />
+  <disable_collisions link1="grasp_frame" link2="jaw_one_v1_1" reason="Never" />
+  <disable_collisions link1="grasp_frame" link2="jaw_two_v1_1" reason="Never" />
+  <disable_collisions link1="jaw_one_v1_1" link2="jaw_two_v1_1" reason="Adjacent" />
+
+  <!-- Non-adjacent pairs that never collide in practice -->
+  <disable_collisions link1="arm_base_link" link2="upper_arm_link_v2_1" reason="Never" />
+  <disable_collisions link1="shoulder_link_v2_1" link2="elbow_link_v2_1" reason="Never" />
+  <disable_collisions link1="upper_arm_link_v2_1" link2="lower_link_v2_1" reason="Never" />
+  <disable_collisions link1="elbow_link_v2_1" link2="wrist_link_v1_1" reason="Never" />
+  <disable_collisions link1="lower_link_v2_1" link2="gripper_link_v2_1" reason="Never" />
+  <disable_collisions link1="wrist_link_v1_1" link2="jaw_one_v1_1" reason="Never" />
+  <disable_collisions link1="wrist_link_v1_1" link2="jaw_two_v1_1" reason="Never" />
+
+</robot>

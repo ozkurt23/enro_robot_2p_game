@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>mecanum_robot_description</name>
+  <version>0.0.1</version>
+  <description>Mecanum robot URDF/Xacro and Gazebo description</description>
+
+  <maintainer email="you@example.com">Your Name</maintainer>
+  <license>MIT</license>
+
+  <!-- ROS 2 build tool -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Xacro -->
+  <depend>xacro</depend>
+
+  <!-- Runtime bağımlılıklar -->
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>navigation2</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>nav2_mppi_controller</exec_depend>
+
+  <export>
+    <!-- Burası eksikti: paketin bir ROS 2 ament_cmake paketi olduğunu söyler -->
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

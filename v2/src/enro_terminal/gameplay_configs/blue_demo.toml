@@ -1,0 +1,7 @@
+schema_version = 1
+gameplay_id = "blue_demo"
+display_name = "Tek Mavi Demo"
+manifest = ["blue"]
+destination = "main_table"
+ordering = "sequential"
+timeout_seconds = 180
