@@ -8,7 +8,7 @@ import time
 from typing import Sequence
 
 from .dialogue import DialogueActor, RenderedReply
-from .executor import MockExecutor
+from .executor import ActionExecutor, MockExecutor, validate_execution
 from .nlu import NluBackend, NluContext, NluError
 from .normalization import (
     SystemCommand,
@@ -78,7 +78,7 @@ class TerminalGame:
         persona: PersonaId,
         nlu: NluBackend,
         actor: DialogueActor,
-        executor: MockExecutor | None = None,
+        executor: ActionExecutor | None = None,
         store: SessionStore | None = None,
         seed: int = 180,
         timeout_seconds: float = 180.0,
@@ -89,7 +89,9 @@ class TerminalGame:
         self.persona = persona
         self.nlu = nlu
         self.actor = actor
-        self.executor = executor or MockExecutor()
+        self.executor: ActionExecutor = (
+            executor if executor is not None else MockExecutor()
+        )
         self.store = store
         self.seed = seed
         if timeout_seconds <= 0:
@@ -148,7 +150,7 @@ class TerminalGame:
             and self._active_elapsed() >= self.timeout_seconds
         ):
             self.round_state.status = RoundStatus.DNF
-            labels = self.executor.cancel_all()
+            labels = self._cancel_actions()
             self._save_state()
             return GameTurn(
                 text,
@@ -216,21 +218,56 @@ class TerminalGame:
         finally:
             self.round_state.model_wait_seconds += max(0.0, self.clock() - actor_started)
         labels: list[str] = []
+        execution_errors: list[str] = []
         for action in decision.actions:
-            execution = self.executor.run(action, expected_color=self.round_state.expected_color)
+            try:
+                candidate = self.executor.run(
+                    action,
+                    expected_color=self.round_state.expected_color,
+                )
+                execution = validate_execution(
+                    candidate,
+                    requested_action=action,
+                )
+            except Exception as exc:
+                # The executor is the final trust boundary.  A crash or a
+                # malformed success result must never consume the manifest.
+                error = f"{action.kind.value}: {type(exc).__name__}: {exc}"
+                execution_errors.append(error)
+                labels.append(
+                    "(yürütücü sonucu güvenle doğrulanamadı; bu action için "
+                    "manifest ilerletilmedi ve kalan action'lar başlatılmadı)"
+                )
+                self._log(
+                    "EXECUTOR_ERROR",
+                    {
+                        "action": action,
+                        "expected_color": self.round_state.expected_color,
+                        "error": error,
+                    },
+                )
+                break
             labels.extend(execution.labels)
             if execution.result.status is ExecutionStatus.SUCCEEDED:
                 self._apply_success(action)
+            else:
+                # Ordered multi-action shortcuts are a single chain.  Running
+                # later steps after one final failure could only create a
+                # misleading partial/out-of-order physical sequence.
+                break
 
         round_won = False
         elapsed = 0.0
-        if self.round_state.remaining == () and self.round_state.status is RoundStatus.PLAYING:
+        if (
+            self.round_state.remaining == ()
+            and self.round_state.status is RoundStatus.PLAYING
+        ):
             self.round_state.status = RoundStatus.WON
             round_won = True
             elapsed = self._active_elapsed()
             delivered = colors_to_turkish(self.round_state.manifest)
             labels.append(
-                f"({delivered}: doğrulanmış görev zinciri tamamlandı; "
+                f"({delivered}: oyun manifestosu yürütücü sonuçlarına göre tamamlandı; "
                 f"tur süresi {elapsed:.1f} saniye)"
             )
 
@@ -285,7 +322,7 @@ class TerminalGame:
             },
         )
         self._save_state()
-        errors = [
+        errors = execution_errors + [
             item.error
             for item in (rendered, closing_rendered)
             if item is not None and item.used_fallback and item.error
@@ -480,14 +517,40 @@ class TerminalGame:
         if command is SystemCommand.RESTART:
             self.reset_round()
             return GameTurn(text, f"Tur sıfırlandı. Persona yine {self.persona.display_name}.")
-        labels = self.executor.cancel_all()
+        labels = self._cancel_actions()
         self._clear_pending_state()
         self._save_state()
         return GameTurn(
             text,
-            "Bekleyen hareketler ve yarım kalmış konuşma görevi iptal edildi.",
+            "Yarım kalmış konuşma görevi iptal edildi; yürütücünün fiziksel iptal "
+            "durumu aşağıdaki sistem etiketiyle raporlandı.",
             labels=labels,
         )
+
+    def _cancel_actions(self) -> tuple[str, ...]:
+        """Request cancellation without inventing an actuator outcome."""
+
+        try:
+            labels = self.executor.cancel_all()
+            if (
+                not isinstance(labels, tuple)
+                or not labels
+                or not all(
+                    isinstance(label, str) and label.strip()
+                    for label in labels
+                )
+            ):
+                raise ValueError("cancel_all boş olmayan string tuple döndürmeli")
+            return labels
+        except Exception as exc:
+            self._log(
+                "EXECUTOR_CANCEL_ERROR",
+                {"error": f"{type(exc).__name__}: {exc}"},
+            )
+            return (
+                "(yürütücü iptal durumunu güvenle raporlayamadı; aktif fiziksel "
+                "hareketin durduğu varsayılmadı)",
+            )
 
     def _age_pending(self) -> None:
         state = self.persona_state

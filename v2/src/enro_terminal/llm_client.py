@@ -63,17 +63,24 @@ class LlamaCppClient:
         )
         try:
             with request.urlopen(req, timeout=self.config.timeout_seconds) as response:
-                raw = response.read().decode("utf-8")
-        except (error.URLError, error.HTTPError, TimeoutError, socket.timeout) as exc:
+                raw_bytes = response.read()
+        except (error.URLError, error.HTTPError, TimeoutError, socket.timeout, OSError) as exc:
             raise LlmUnavailable(f"yerel model sunucusuna erişilemedi: {exc}") from exc
         try:
+            raw = raw_bytes.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise LlmProtocolError("model sunucusu UTF-8 olmayan yanıt döndürdü") from exc
+        try:
             return json.loads(raw)
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, RecursionError) as exc:
             raise LlmProtocolError("model sunucusu JSON olmayan yanıt döndürdü") from exc
 
     def health(self) -> bool:
         result = self._call("/health")
-        return isinstance(result, Mapping) and result.get("status") in {"ok", "ready"}
+        if not isinstance(result, Mapping):
+            return False
+        status = result.get("status")
+        return isinstance(status, str) and status in {"ok", "ready"}
 
     def model_ids(self) -> tuple[str, ...]:
         result = self._call("/v1/models")
@@ -102,10 +109,15 @@ class LlamaCppClient:
         if response_format is not None:
             payload["response_format"] = response_format
         result = self._call("/v1/chat/completions", method="POST", payload=payload)
-        try:
-            content = result["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as exc:
-            raise LlmProtocolError("chat completion alanları eksik") from exc
+        if not isinstance(result, Mapping):
+            raise LlmProtocolError("chat completion yanıtı nesne olmalı")
+        choices = result.get("choices")
+        if not isinstance(choices, list) or not choices:
+            raise LlmProtocolError("chat completion choices alanı eksik")
+        first = choices[0]
+        if not isinstance(first, Mapping) or not isinstance(first.get("message"), Mapping):
+            raise LlmProtocolError("chat completion message alanı eksik")
+        content = first["message"].get("content")
         if not isinstance(content, str) or not content.strip():
             raise LlmProtocolError("model boş yanıt döndürdü")
         return strip_reasoning(content)
@@ -119,24 +131,60 @@ def strip_reasoning(content: str) -> str:
     return value
 
 
-def extract_json_object(content: str) -> Mapping[str, Any]:
+def _strict_json_loads(value: str) -> Any:
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in result:
+                raise LlmProtocolError(f"model JSON yanıtında yinelenen alan var: {key}")
+            result[key] = item
+        return result
+
+    def reject_non_finite(value: str) -> None:
+        raise LlmProtocolError(f"model JSON yanıtında geçersiz sayı var: {value}")
+
+    return json.loads(
+        value,
+        object_pairs_hook=reject_duplicate_keys,
+        parse_constant=reject_non_finite,
+    )
+
+
+def extract_json_object(content: str, *, strict: bool = False) -> Mapping[str, Any]:
+    """Extract one model-produced JSON object.
+
+    ``strict=True`` is intended for action-adjacent structured output.  It
+    accepts either a bare object or a single Markdown JSON fence, but rejects
+    prose wrappers, duplicate keys and non-finite numbers.  The default keeps
+    the historical best-effort extraction used by non-action dialogue code.
+    """
+
+    if not isinstance(content, str):
+        raise LlmProtocolError("model yanıtı metin olmalı")
     value = content.strip()
     fence = chr(96) * 3
     if value.startswith(fence):
-        first_newline = value.find("\n")
-        last_fence = value.rfind(fence)
-        if first_newline >= 0 and last_fence > first_newline:
-            value = value[first_newline + 1:last_fence].strip()
+        match = re.fullmatch(
+            r"```(?:json)?[ \t]*\r?\n(?P<body>.*?)\r?\n?```",
+            value,
+            flags=re.DOTALL | re.IGNORECASE,
+        )
+        if match is not None:
+            value = match.group("body").strip()
+        elif strict:
+            raise LlmProtocolError("modelin JSON kod bloğu geçersiz")
     try:
-        result = json.loads(value)
-    except json.JSONDecodeError:
+        result = _strict_json_loads(value) if strict else json.loads(value)
+    except (json.JSONDecodeError, RecursionError):
+        if strict:
+            raise LlmProtocolError("model yanıtı yalnız bir JSON nesnesi olmalı")
         start = value.find("{")
         end = value.rfind("}")
         if start < 0 or end <= start:
             raise LlmProtocolError("model yanıtında JSON nesnesi bulunamadı")
         try:
             result = json.loads(value[start:end + 1])
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, RecursionError) as exc:
             raise LlmProtocolError("modelin JSON nesnesi ayrıştırılamadı") from exc
     if not isinstance(result, Mapping):
         raise LlmProtocolError("model yanıtı JSON nesnesi olmalı")

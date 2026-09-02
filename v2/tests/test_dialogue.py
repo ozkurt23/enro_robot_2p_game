@@ -38,6 +38,16 @@ class StubClient:
         return self.content
 
 
+class SequenceClient:
+    def __init__(self, *contents: str) -> None:
+        self.contents = list(contents)
+        self.calls: list[tuple[object, dict[str, object]]] = []
+
+    def chat(self, messages, **kwargs):
+        self.calls.append((messages, kwargs))
+        return self.contents.pop(0)
+
+
 def make_event(payload, text: str = "Lütfen mavi cismi getir") -> TurnEvent:
     return TurnEvent.from_mapping(
         deepcopy(payload),
@@ -221,6 +231,30 @@ def test_qwen_actor_falls_back_when_rejected_task_is_claimed_as_started(
     assert reply.used_fallback
     assert "hareket iddiası" in reply.error
     assert reply.utterance == "Önce doğru unvanımı kullanmalısın."
+
+
+def test_qwen_actor_retry_receives_error_specific_non_action_constraint(
+    valid_turn_payload,
+):
+    client = SequenceClient(
+        '{"utterance":"Önce maviyi getiriyorum."}',
+        '{"utterance":"İstek reddedildi; hiçbir hareket başlatılmadı."}',
+    )
+    actor = QwenPersonaActor(client, seed=180)
+
+    reply = actor.render(
+        reject_decision(),
+        make_event(valid_turn_payload),
+        PersonaState(PersonaId.MERAKLI),
+        RoundState(),
+        (),
+    )
+
+    assert not reply.used_fallback
+    assert len(client.calls) == 2
+    repair_message = client.calls[1][0][-1]["content"]
+    assert "Bu karar fiziksel eylem başlatmıyor" in repair_message
+    assert "götürüyorum" in repair_message
 
 
 def test_qwen_actor_accepts_bounded_persona_wording(valid_turn_payload):

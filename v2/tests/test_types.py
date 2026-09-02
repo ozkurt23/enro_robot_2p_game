@@ -89,6 +89,7 @@ def test_turn_event_rejects_unknown_enums(valid_turn_payload, path, bad_value):
         (("confidence", "overall"), True),
         (("confidence", "task"), 1.01),
         (("confidence", "colors"), -0.01),
+        (("confidence", "overall"), 10**400),
         (("special_candidates",), {}),
         (("evidence",), "mavi"),
     ],
@@ -190,3 +191,40 @@ def test_turn_event_rejects_inconsistent_task_request_and_operation(
 
     with pytest.raises(DomainValidationError, match="birbiriyle tutarlı"):
         parse(payload)
+
+
+@pytest.mark.parametrize(
+    "bad_value",
+    [None, False, 0, "royal_waltz", [None], [1], ["royal_waltz"], [[]]],
+)
+def test_turn_event_rejects_every_non_object_special_candidate_shape(
+    valid_turn_payload,
+    bad_value,
+):
+    payload = deepcopy(valid_turn_payload)
+    payload["special_candidates"] = bad_value
+
+    with pytest.raises(DomainValidationError):
+        parse(payload)
+
+
+@pytest.mark.parametrize("speech_acts", [[], ["task_request", "task_request"]])
+def test_turn_event_requires_nonempty_unique_speech_acts(
+    valid_turn_payload,
+    speech_acts,
+):
+    payload = deepcopy(valid_turn_payload)
+    payload["speech_acts"] = speech_acts
+
+    with pytest.raises(DomainValidationError, match="speech_acts"):
+        parse(payload)
+
+
+@pytest.mark.parametrize("bad_root", [None, [], "turn", 1])
+def test_turn_event_rejects_non_object_roots_as_domain_errors(bad_root):
+    with pytest.raises(DomainValidationError, match="turn_event: nesne"):
+        TurnEvent.from_mapping(
+            bad_root,
+            raw_text="sohbet",
+            normalized_text="sohbet",
+        )

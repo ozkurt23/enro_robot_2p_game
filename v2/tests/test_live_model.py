@@ -10,10 +10,9 @@ import os
 
 import pytest
 
-from enro_terminal.eval_nlu import evaluate_case, load_corpus
+from enro_terminal.eval_nlu import context_for_case, evaluate_case, load_corpus
 from enro_terminal.llm_client import LlamaCppClient, LlamaCppConfig
-from enro_terminal.nlu import NluContext, QwenNlu
-from enro_terminal.types import PersonaId, PersonaState, RoundState
+from enro_terminal.nlu import QwenNlu
 
 
 LIVE_MODEL_ENABLED = os.environ.get("ENRO_RUN_LIVE_MODEL_TESTS") == "1"
@@ -38,11 +37,7 @@ def test_running_local_qwen_passes_semantic_corpus():
     failures: list[str] = []
 
     for case in cases:
-        context = NluContext(
-            PersonaState(PersonaId.LEYDI_SERVO),
-            RoundState(),
-        )
-        event = backend.parse(case["text"], context)
+        event = backend.parse(case["text"], context_for_case(case))
         problems = evaluate_case(event, case["expected"])
         if problems:
             failures.append(f"{case['id']}: {'; '.join(problems)}")

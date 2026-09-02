@@ -370,7 +370,7 @@ def _task(context: TurnContext) -> Decision:
         actions=actions,
         required_facts=task_facts(event.task.colors),
         forbidden_claims=task_forbidden_claims(context.round_state),
-        canonical_reply=f"Sözün açık ve saygılı. {event.task.colors[0].turkish.capitalize()} yük ana masaya götürülecek.",
+        canonical_reply=f"Sözün açık ve kararlı. {event.task.colors[0].turkish.capitalize()} yük ana masaya götürülecek.",
         max_sentences=2,
     )
 

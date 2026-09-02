@@ -25,4 +25,10 @@ if [[ "$MODE" == "full" ]]; then
     export PYTHONPATH="$ENRO_V2_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
     enro_log "Checked-in Türkçe NLU corpus'u canlı Qwen ile değerlendiriliyor"
     "$ENRO_VENV_PYTHON" -m enro_terminal.eval_nlu --backend qwen
+    enro_log "Gerçek persona policy + authorization hattı canlı Qwen ile değerlendiriliyor"
+    "$ENRO_VENV_PYTHON" -m enro_terminal.eval_gameplay --backend qwen
+    for actor_seed in 180 271 912; do
+        enro_log "Yedi persona actor sözleşmesi canlı Qwen ile değerlendiriliyor (seed=$actor_seed)"
+        "$ENRO_VENV_PYTHON" -m enro_terminal.eval_personas --seed "$actor_seed"
+    done
 fi

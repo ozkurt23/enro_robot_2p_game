@@ -55,6 +55,29 @@ Native Gazebo arena ile birlikte çalıştırma:
 ./run_sim_game.sh
 ~~~
 
+Mevcut hareket akışını değiştirmeden, her başarılı Trigger yanıtından sonra
+küpün Gazebo pozunu salt-okunur örneklerle doğrulayan sıkı profil:
+
+~~~bash
+./run_sim_game.sh -- --verify-gazebo-result
+~~~
+
+Bu profilde küp ana masa sınırında kararlı biçimde gözlenmezse servis başarı
+bildirse bile oyun manifestosu ilerlemez.
+
+Aynı sözleşmenin LLM ve GUI olmadan tekrarlanabilir mavi-küp smoke testi:
+
+~~~bash
+./run_sim_game.sh --headless --rules -- \
+  --persona neseli --no-store --verify-gazebo-result \
+  --script scripts/sim_smoke_blue.txt
+~~~
+
+Scriptli operatör testi Trigger veya fiziksel pose predicate’i başarısızsa sıfır
+çıkış kodu üretmez; CI/release adımı hatayı doğrudan yakalar.
+Tam mavi → yeşil → kırmızı fiziksel zinciri için aynı komutta script yolunu
+`scripts/sim_smoke_manifest.txt` olarak değiştirin.
+
 Bu komut native Gazebo penceresinde yalnız dört masa ve mobil robot sahnesini
 açar; Nav2 ve SLAM Toolbox arka planda çalışır, RViz ve Reaktör/festival arayüzü
 açılmaz. LLM terminalde ayrı kalır.
@@ -175,6 +198,25 @@ ENRO_RUN_LIVE_MODEL_TESTS=1 uv run pytest -q -m live_model
 ve çalışan localhost model sunucusuna bağlanır. En güncel sayım için `./check.sh`
 çıktısı yetkilidir; gerçek Qwen corpus testi ayrıca `--live`/`--live-eval` ile
 çalıştırılır.
+
+`--live-eval`, NLU corpus’una ek olarak 19 senaryo/23 turu gerçek
+`QwenNlu -> persona policy -> authorization -> side-effect-free kayıt
+yürütücüsü` zincirinden geçirir; yanlış fiziksel action sayısının sıfır olmasını
+ister. Ardından yedi personayı kabul, ret, açıklama ve sohbet kararlarında üç
+sabit seed ile `3 × 7 × 4 = 84` gerçek Qwen actor örneğinde sınar. Arena
+sözleşmesini Gazebo’yu değiştirmeden kontrol etmek
+ve anonim insan playtest verisini yayın kapısından geçirmek için:
+
+~~~bash
+PYTHONPATH=src python -m enro_terminal.sim_contract
+PYTHONPATH=src python -m enro_terminal.sim_contract --live-color blue
+PYTHONPATH=src python -m enro_terminal.eval_gameplay --backend rules
+PYTHONPATH=src python -m enro_terminal.playtest_eval ratings.jsonl
+~~~
+
+Ayrıntılı eşikler ve persona başına kabul sözleşmeleri için
+[Persona, LLM ve simülasyon kalite kapıları](docs/PERSONA_LLM_KALITE_KAPILARI.md)
+belgesine bakın.
 
 ## Raporlar
 

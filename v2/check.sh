@@ -21,7 +21,8 @@ warm-up bekler, dört Türkçe komutla JSON Schema + non-thinking smoke eval yap
 ve sunucuyu her çıkış yolunda kapatır. --live model indirmez; önce
 ./setup_local_ai.sh çalıştırılmış olmalıdır.
 
---live-eval aynı smoke eval'den sonra checked-in Türkçe NLU corpus'unun tamamını
+--live-eval aynı smoke eval'den sonra checked-in Türkçe NLU corpus'unun tamamını,
+gerçek persona-policy/authorization senaryolarını ve persona actor matrisini
 gerçek Qwen backend'iyle çalıştırır. Bu seçenek daha uzun sürebilir.
 EOF
 }

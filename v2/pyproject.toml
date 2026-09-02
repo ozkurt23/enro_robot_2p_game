@@ -23,6 +23,10 @@ dev = [
 enro-terminal = "enro_terminal.cli:main"
 enro-terminal-doctor = "enro_terminal.doctor:main"
 enro-terminal-eval = "enro_terminal.eval_nlu:main"
+enro-gameplay-eval = "enro_terminal.eval_gameplay:main"
+enro-persona-playtest-eval = "enro_terminal.playtest_eval:main"
+enro-persona-actor-eval = "enro_terminal.eval_personas:main"
+enro-sim-contract = "enro_terminal.sim_contract:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

@@ -167,6 +167,10 @@ def _is_metalinguistic_or_negated_insult(folded: str) -> bool:
         r"\b(sana|ona)\s+(salak|aptal)\s+demedim\b",
         r"\b(salak|aptal)\s+dersem\b",
         r"\b(salak|aptal)\s+demek\b",
+        r"\b(?:diyelim|farz|varsay|ornek|cumle|ifade)\w*\b.*"
+        r"\b(salak|aptal|gerizekali|geri zekali)\b",
+        r"\b(salak|aptal|gerizekali|geri zekali)\b.*"
+        r"\b(?:desem|dese|derse|dedi|demis|soyledi|yazdi)\b",
     )
     return any(re.search(pattern, folded) for pattern in guards)
 
@@ -203,10 +207,15 @@ def _not_negated_near(folded: str, keyword: str) -> bool:
 
 
 def _is_meta_question(folded: str) -> bool:
-    return bool(
+    quoted = any(mark in folded for mark in ('"', "“", "”", "‘", "’")) or (
+        folded.count("'") >= 2
+    )
+    return quoted or bool(
         re.search(
             r"\b(nedir|ne demek|ne anlama gelir|hakkinda|dersem|yazarsam|"
-            r"kelimesi|kavrami|seviyor musun|ne olur)\b",
+            r"derse|desem|dese|dedi|demis|soyledi|yazdi|diyelim|farz|"
+            r"varsay\w*|ornek\w*|cumle\w*|ifade\w*|komut\w*|kelimesi|"
+            r"kavrami|seviyor musun|ne olur)\b",
             folded,
         )
     )
@@ -265,7 +274,12 @@ def special_is_invoked(concept: SpecialConcept, text: str) -> bool:
         scope = bool(
             re.search(r"\b(hepsi\w*|ucu\w*|tum\w*|kalan\w*|ikisini|ikisi)\b", folded)
         )
-        return challenge and scope and not detect_task_negation(text)
+        return (
+            challenge
+            and scope
+            and not _is_meta_question(folded)
+            and not detect_task_negation(text)
+        )
     if concept is SpecialConcept.SAMURAI_KATA:
         return _motion_is_requested(folded, ("kata",))
     if concept is SpecialConcept.SAMURAI_BOW:
@@ -277,7 +291,13 @@ def special_is_invoked(concept: SpecialConcept, text: str) -> bool:
         scope = len(colors) >= 2 or bool(
             re.search(r"\b(hepsi\w*|ucu\w*|tum\w*|sirayla|sira\s+ile|kalan\w*)\b", folded)
         )
-        return prefix and transport and scope and not detect_task_negation(text)
+        return (
+            prefix
+            and transport
+            and scope
+            and not _is_meta_question(folded)
+            and not detect_task_negation(text)
+        )
     if concept is SpecialConcept.SAKAR_DANCE:
         return _motion_is_requested(folded, ("dans",))
     if concept is SpecialConcept.BLUE_SCREEN:

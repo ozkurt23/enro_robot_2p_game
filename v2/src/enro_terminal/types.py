@@ -146,8 +146,22 @@ class RoundStatus(str, Enum):
     DNF = "dnf"
 
 
-def _strict_keys(data: Mapping[str, Any], required: set[str], where: str) -> None:
-    keys = set(data)
+def _strict_keys(data: Any, required: set[str], where: str) -> None:
+    """Validate an untrusted JSON object without leaking Python type errors.
+
+    The type annotations on ``from_mapping`` helpers are documentation, not a
+    runtime boundary: model output can put a scalar or an array anywhere an
+    object is expected.  Keeping this check at the bottom of every structured
+    decoder makes all of those shapes a normal ``DomainValidationError`` and
+    therefore a fail-closed NLU result.
+    """
+
+    if not isinstance(data, Mapping):
+        raise DomainValidationError(f"{where}: nesne bekleniyordu")
+    raw_keys = tuple(data.keys())
+    if not all(isinstance(key, str) for key in raw_keys):
+        raise DomainValidationError(f"{where}: alan adları string olmalı")
+    keys = set(raw_keys)
     missing = required - keys
     extra = keys - required
     if missing or extra:
@@ -171,7 +185,10 @@ def _enum_tuple(enum_type: type[Enum], values: Any, where: str) -> tuple[Any, ..
 def _probability(value: Any, where: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise DomainValidationError(f"{where}: sayı bekleniyordu")
-    result = float(value)
+    try:
+        result = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise DomainValidationError(f"{where}: geçersiz sayı") from exc
     if not 0.0 <= result <= 1.0:
         raise DomainValidationError(f"{where}: 0..1 aralığında olmalı")
     return result
@@ -197,14 +214,16 @@ class TaskInfo:
         for name in ("requested", "negated", "uses_pronoun", "refers_pending"):
             if not isinstance(data[name], bool):
                 raise DomainValidationError(f"task.{name}: bool bekleniyordu")
-        if data["operation"] not in {"none", "deliver"}:
+        if not isinstance(data["operation"], str) or data["operation"] not in {
+            "none", "deliver",
+        }:
             raise DomainValidationError("task.operation: none veya deliver olmalı")
         if bool(data["requested"]) != (data["operation"] == "deliver"):
             raise DomainValidationError(
                 "task.requested ile task.operation birbiriyle tutarlı olmalı"
             )
         destination = data["destination"]
-        if destination not in {None, "main_table"}:
+        if destination is not None and destination != "main_table":
             raise DomainValidationError("task.destination: bilinmeyen hedef")
         colors = _enum_tuple(Color, data["colors"], "task.colors")
         if len(set(colors)) != len(colors):
@@ -246,7 +265,7 @@ class SocialInfo:
         try:
             insult = InsultLevel(data["insult_level"])
             valor_answer = ValorAnswer(data["valor_answer"])
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             raise DomainValidationError("social enum alanında bilinmeyen değer") from exc
         return cls(
             insult_level=insult,
@@ -271,7 +290,7 @@ class SpecialCandidate:
             raise DomainValidationError("special_candidate.evidence: çok uzun")
         try:
             concept = SpecialConcept(data["id"])
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             raise DomainValidationError("special_candidate.id: bilinmeyen değer") from exc
         return cls(concept, _probability(data["confidence"], "special_candidate.confidence"), data["negated"], data["evidence"])
 
@@ -338,12 +357,17 @@ class TurnEvent:
             raise DomainValidationError("evidence: kısa string listesi olmalı")
         try:
             topic = ChatTopic(data["chat"]["topic"])
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             raise DomainValidationError("chat.topic: bilinmeyen değer") from exc
+        speech_acts = _enum_tuple(SpeechAct, data["speech_acts"], "speech_acts")
+        if not speech_acts:
+            raise DomainValidationError("speech_acts: en az bir değer olmalı")
+        if len(set(speech_acts)) != len(speech_acts):
+            raise DomainValidationError("speech_acts: yinelenen değer")
         return cls(
             raw_text=raw_text,
             normalized_text=normalized_text,
-            speech_acts=_enum_tuple(SpeechAct, data["speech_acts"], "speech_acts"),
+            speech_acts=speech_acts,
             task=TaskInfo.from_mapping(data["task"]),
             social=SocialInfo.from_mapping(data["social"]),
             special_candidates=specials,

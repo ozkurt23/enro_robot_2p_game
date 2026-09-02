@@ -35,7 +35,9 @@ MAIN_TABLE_CENTER = (0.0, -3.0)
 
 ARM_JOINTS = [f"revolute_{index}" for index in range(1, 7)]
 GRIPPER_JOINTS = ["slider_7", "slider_8"]
-BLUE_CUBE_SIZE = 0.10
+# Must match the collision and visual geometry in empty_robot_world.sdf.
+# The contract test fails if either side drifts again.
+BLUE_CUBE_SIZE = 0.05
 
 # S_Robot_Arm_V2_Moveit_PP, commit aedf560:
 # - q=0.040 gerçek küpü temizleyen açık konumdur.

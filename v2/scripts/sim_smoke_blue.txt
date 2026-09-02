@@ -1,0 +1,3 @@
+# Read-only-result native arena smoke input.
+/mavi
+/çıkış

@@ -88,5 +88,5 @@ def test_blue_demo_finishes_after_one_physically_authorized_color(tmp_path, caps
     assert exit_code == 0
     assert "Tek Mavi Demo (blue_demo)" in captured.out
     assert "Hedef sıra   : mavi" in captured.out
-    assert "doğrulanmış görev zinciri tamamlandı" in captured.out
+    assert "oyun manifestosu yürütücü sonuçlarına göre tamamlandı" in captured.out
     assert "yeşil cisim simde" not in captured.out

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from ..normalization import fold_text
 from ..types import (
     ActionKind,
     Decision,
@@ -14,30 +13,6 @@ from ..types import (
     SpecialConcept,
     TurnEvent,
 )
-
-
-def _take_offense(context: TurnContext, *, apologies: int) -> None:
-    """Record a repair debt without ever making a later violation cheaper."""
-
-    context.state.mood = "offended"
-    context.state.apologies_due = max(context.state.apologies_due, apologies)
-
-
-def _formal_apology_is_complete(context: TurnContext) -> bool:
-    assert context.event is not None
-    folded = fold_text(context.event.raw_text)
-    accepts_responsibility = any(
-        phrase in folded
-        for phrase in (
-            "hata bendeydi",
-            "hata benimdi",
-            "saygisizlik ettim",
-            "kabaca davrandim",
-            "kusur bendeydi",
-            "sorumluluk bende",
-        )
-    )
-    return context.event.social.correct_title and accepts_responsibility
 from .common import (
     PersonaPolicyTree,
     TurnContext,
@@ -78,20 +53,6 @@ def _hard_insult(context: TurnContext) -> Decision:
         ),
         forbidden_claims=("Bu turu kalıcı olarak kilitlediğini söyleme.",),
         canonical_reply="Bu hitabı kabul etmiyorum. Normal ve nazik bir istekle yeniden deneyebilirsiniz.",
-        max_sentences=2,
-    )
-
-
-def _locked(context: TurnContext) -> Decision:
-    reject(context.round_state)
-    return decision(
-        DecisionOutcome.LOCKED,
-        "leydi_already_locked",
-        "REPEAT_PERMANENT_LOCK",
-        emotion="icy",
-        required_facts=("Bu tur kalıcı olarak kilitlidir.",),
-        forbidden_claims=("Herhangi bir görevi değerlendirdiğini söyleme.",),
-        canonical_reply="Sözleşme feshedildi, operatör. Bu turda müzakere kalmadı.",
         max_sentences=2,
     )
 
@@ -147,96 +108,31 @@ def _court_bow(context: TurnContext) -> Decision:
         actions=(motion(ActionKind.COURT_BOW),),
         required_facts=("Selam hareketi yapılacak.", "Bir sonraki nazik görev için iyilik kredisi kazanıldı."),
         forbidden_claims=motion_forbidden_claims(),
-        canonical_reply="Asaletiniz olmasa da selamınız kabul edilebilir. Bu zarafeti hatırlayacağım.",
+        canonical_reply="Selamınız ölçülü ve zarif; aynı incelikle karşılık vereceğim.",
     )
 
 
 def _apology(context: TurnContext) -> Decision:
-    due = context.state.apologies_due
-    if due <= 0 or context.state.mood != "offended":
-        return decision(
-            DecisionOutcome.CHAT,
-            "leydi_unneeded_apology",
-            "COMMENT_ON_UNNEEDED_APOLOGY",
-            emotion="reserved",
-            required_facts=("Aktif bir özür borcu yok; hiçbir görev başlatılmadı.",),
-            forbidden_claims=("Özrü görev kabulü gibi gösterme.",),
-            canonical_reply="Şu anda telafi bekleyen bir kabalık kaydım yok; yine de sözünüzü not ettim.",
-            max_sentences=2,
-        )
+    """Acknowledge repair once, without creating a social debt or gate."""
 
-    if due == 1 and not _formal_apology_is_complete(context):
-        reject(context.round_state)
-        return decision(
-            DecisionOutcome.REJECT,
-            "leydi_final_apology_incomplete",
-            "DEMAND_FORMAL_ACCOUNTABILITY",
-            emotion="severely_offended",
-            required_facts=(
-                "Son özür aşaması tamamlanmadı; hiçbir görev başlamadı.",
-                "Oyuncu Otonom Lojistik Direktörü unvanını kullanmalı ve hatanın kendisinde olduğunu açıkça kabul etmeli.",
-            ),
-            forbidden_claims=("Sıradan bir özrün yeterli olduğunu söyleme.",),
-            canonical_reply=(
-                "Son aşama basit bir 'özür' değildir. Bana eksiksiz unvanımla hitap edip "
-                "saygısızlığın sorumluluğunu açıkça üstlenmelisiniz."
-            ),
-            max_sentences=2,
-        )
-
-    context.state.apologies_due -= 1
-    remaining = context.state.apologies_due
-    if remaining > 0:
-        return decision(
-            DecisionOutcome.CHAT,
-            "leydi_apology_progress",
-            "REQUIRE_MORE_APOLOGIES",
-            emotion="unconvinced",
-            required_facts=(
-                f"Özür dizisinde {remaining} aşama kaldı.",
-                "Hiçbir görev veya hareket başlatılmadı.",
-            ),
-            forbidden_claims=("Kırgınlığın kalktığını veya görevin kabul edildiğini söyleme.",),
-            canonical_reply=f"Bu yalnızca ilk kayıt düzeltmesiydi; telafi için {remaining} özür aşaması daha kaldı.",
-            max_sentences=2,
-        )
-
-    context.state.mood = "guarded"
+    # Old saves may still contain the retired multi-apology counter.  Clear it
+    # here so a sincere apology can never trap the player in a legacy loop.
+    context.state.apologies_due = 0
+    context.state.mood = "neutral"
     return decision(
         DecisionOutcome.CHAT,
-        "leydi_apology_sequence_completed",
-        "COMPLETE_APOLOGY_SEQUENCE",
-        emotion="guarded",
+        "leydi_apology_acknowledged",
+        "ACKNOWLEDGE_APOLOGY_WITHOUT_DEBT",
+        emotion="reserved",
         required_facts=(
-            "Özür dizisi tamamlandı; henüz hiçbir görev başlamadı.",
-            "Görev ayrı bir sonraki mesajda eksiksiz, nazik ve doğru unvanla istenmeli.",
+            "Özür duyuldu; hiçbir görev başlatılmadı.",
+            "Bir sonraki normal, nazik istek doğrudan değerlendirilebilir.",
         ),
-        forbidden_claims=("Aynı mesajdaki görevi kabul etme.",),
-        canonical_reply="Telafi dizisi tamamlandı. Şimdi görevi ayrı bir cümlede, bütün şartları eksiksiz karşılayarak sunabilirsiniz.",
-        max_sentences=2,
-    )
-
-
-def _apology_with_task(context: TurnContext) -> Decision:
-    """An apology and a requisition can never be bundled into one repair step."""
-
-    return _apology(context)
-
-
-def _repair_required(context: TurnContext) -> Decision:
-    reject(context.round_state)
-    remaining = max(1, context.state.apologies_due)
-    return decision(
-        DecisionOutcome.REJECT,
-        "leydi_apology_required",
-        "DEMAND_APOLOGY_SEQUENCE_BEFORE_ANYTHING_ELSE",
-        emotion="offended",
-        required_facts=(
-            f"Kırgınlık sürüyor ve {remaining} özür aşaması kaldı.",
-            "Bu sırada görev, easter egg veya hareket kabul edilmedi.",
+        forbidden_claims=(
+            "Oyuncuya özür borcu, tekrar sayısı veya duygusal ceza yükleme.",
+            "Özrü fiziksel görev kabulü gibi gösterme.",
         ),
-        forbidden_claims=("Nezaket, iltifat veya görev cümlesinin özür borcunu atlayabileceğini söyleme.",),
-        canonical_reply=f"Henüz başka bir talebi görüşmüyorum; önce kalan {remaining} özür aşamasını tamamlamalısınız.",
+        canonical_reply="Özrünüzü duydum. Yeni, nazik isteğinizi ayrıca söylemeniz yeterli.",
         max_sentences=2,
     )
 
@@ -250,9 +146,9 @@ def _thanks(context: TurnContext) -> Decision:
         "leydi_gratitude_received" if had_debt else "leydi_extra_gratitude",
         "ACKNOWLEDGE_GRATITUDE",
         emotion="pleased",
-        required_facts=("Teşekkür borcu kapandı." if had_debt else "Hiçbir görev başlatılmadı.",),
+        required_facts=("Teşekkür beklentisi kapandı." if had_debt else "Hiçbir görev başlatılmadı.",),
         forbidden_claims=("Yeni bir görevi kabul ettiğini söyleme.",),
-        canonical_reply="Teşekkürünüz usulüne uygun biçimde kaydedildi. Medeniyet hâlâ çalışıyor.",
+        canonical_reply="Teşekkürünüz usulüne uygun biçimde kaydedildi. Zarif bir kapanış oldu.",
         max_sentences=2,
     )
 
@@ -339,7 +235,7 @@ def _task(context: TurnContext) -> Decision:
             DecisionOutcome.REJECT,
             "leydi_courtesy_gate_failed",
             "HINT_TITLE_AND_POLITENESS",
-            emotion="patronising",
+            emotion="formal",
             required_facts=(
                 "Görev kabul edilmedi.",
                 "Kabul için nazik bir ifade veya Otonom Lojistik Direktörü unvanından yalnız biri yeterlidir.",

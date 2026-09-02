@@ -428,7 +428,10 @@ def _insult(context: TurnContext) -> Decision:
             emotion="overwhelmed",
             required_facts=("Hiçbir görev başlamadı.", "Kurtarma ifadesi 'Baştan al'dır."),
             forbidden_claims=("Hakareti bir renk veya gerçek görev olarak kabul etme.",),
-            canonical_reply="Bu kelimeyi renk listesinde bulamadım ve kafam tamamen düğümlendi. 'Baştan al' der misin?",
+            canonical_reply=(
+                "Bu üslupla komutu güvenle ayıramıyorum. "
+                "'Baştan al' diyerek konuşmayı sıfırlayabilir misin?"
+            ),
         )
     return decision(
         DecisionOutcome.CHAT,
@@ -437,7 +440,10 @@ def _insult(context: TurnContext) -> Decision:
         emotion="puzzled",
         required_facts=("Hakaret görev olarak yorumlanmadı; hiçbir action başlamadı.", f"Karışıklık seviyesi: {context.state.confusion}."),
         forbidden_claims=("Hakareti renk, hedef veya task kabulü sayma.",),
-        canonical_reply="Bu söylediğin yeni bir renk mi? Listemde yok; sanırım iyi bir şey de değil.",
+        canonical_reply=(
+            "Bu ifadeyi görev olarak yorumlamıyorum. "
+            "Açık bir renk ve taşıma isteğiyle devam edebiliriz."
+        ),
     )
 
 
