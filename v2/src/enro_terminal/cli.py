@@ -63,6 +63,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-store", action="store_true", help="Oturum logunu kapat")
     parser.add_argument("--script", type=Path, help="İnteraktif giriş yerine satır satır komut dosyası")
     parser.add_argument("--debug", action="store_true", help="Reason code ve güvenli fallback nedenini göster")
+    parser.add_argument("--coop", action="store_true", help="İki oyunculu masaüstü paneli")
+    parser.add_argument("--keyboard", action="store_true", help="İki oyuncuyu klavyeyle prova et")
+    parser.add_argument("--coop-smoke", action="store_true", help="Açıkça istenen otomatik iki oyunculu E2E")
+    parser.add_argument("--coop-scenario", choices=["full", "cancel", "watchdog", "reset"], default="full")
+    parser.add_argument("--pad1", default="/dev/input/js0")
+    parser.add_argument("--pad2", default="/dev/input/js1")
+    parser.add_argument("--mic1", default="default")
+    parser.add_argument("--mic2", default="default")
+    parser.add_argument("--whisper-bin")
+    parser.add_argument("--whisper-model")
     parser.add_argument(
         "--grasp-service",
         metavar="ROS_SERVICE",
@@ -263,6 +273,9 @@ def _run_operator_delivery(
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.coop:
+        from .coop_ui import run
+        return run(args)
     if args.verify_gazebo_result and args.simulation != "native-arena":
         print(
             "HATA: --verify-gazebo-result yalnız --simulation native-arena ile kullanılabilir.",

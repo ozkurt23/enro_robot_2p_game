@@ -44,6 +44,19 @@ operatörün `/kavra` komutuyla test edilir; LLM’e hareket yetkisi vermez.
 
 ## En kolay çalıştırma
 
+İki gamepad'li şenlik oyunu (Gazebo + yerel Qwen + masaüstü paneli):
+
+~~~bash
+cd enro_robot_2p_game
+./start_coop_game.sh
+# Donanım olmadan panel provası:
+./start_coop_game.sh --demo --rules -- --keyboard
+~~~
+
+Roller, bas-konuş, kontrol devri ve testler:
+[İki oyunculu şenlik rehberi](docs/IKI_OYUNCULU_SENLIK.md).
+Tek oyunculu terminal yolu aşağıdaki gibi korunur.
+
 ~~~bash
 cd enro_robot_2p_game/v2
 ./run_game.sh

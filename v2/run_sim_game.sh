@@ -13,6 +13,7 @@ BUILD_WS=0
 RULES=0
 NO_SETUP=0
 NO_WARMUP=0
+COOP=0
 GAME_ARGS=()
 
 usage() {
@@ -27,6 +28,7 @@ Reaktör 180 arayüzü, festival_game ve özel oyun kamerası kullanılmaz.
   --headless          Gazebo fiziğini GUI olmadan çalıştır (test/CI)
   --build             ROS çalışma alanını önce yeniden derle
   --rules             Qwen yerine çevrimdışı rules backend kullan
+  --coop              İki gamepad'li panel ve iptal edilebilir taşıma köprüsü
   --no-setup          Eksik yerel AI dosyalarını indirme
   --no-warmup         Qwen warm-up isteğini atla
   -h, --help          Bu yardımı göster
@@ -60,6 +62,10 @@ while (($#)); do
             RULES=1
             shift
             ;;
+        --coop)
+            COOP=1
+            shift
+            ;;
         --no-setup)
             NO_SETUP=1
             shift
@@ -87,6 +93,10 @@ done
 
 if [[ "$SCENE" != "arena" && "$SCENE" != "grasp-cell" ]]; then
     echo "[hata] --scene yalnız arena veya grasp-cell olabilir: $SCENE" >&2
+    exit 2
+fi
+if ((COOP)) && [[ "$SCENE" != "arena" ]]; then
+    echo "[hata] İki oyunculu oyun yalnız arena sahnesini destekler." >&2
     exit 2
 fi
 if [[ ! -f /opt/ros/jazzy/setup.bash ]]; then
@@ -356,6 +366,9 @@ else
         echo "[hata] Nav2 /navigate_to_pose hazır olmadı: $NAV2_LOG" >&2
         exit 1
     fi
+    if ((COOP)); then
+        echo "      İki oyunculu panel kendi iptal edilebilir ROS köprüsünü açacak."
+    else
     echo "      S_Mecanum_Wheel hareket servisleri Qwen'e bağlanıyor..."
     python3 "$SCRIPT_DIR/scripts/session_exec.py" \
         ros2 run mecanum_kinematics llm_agent --ros-args \
@@ -368,15 +381,24 @@ else
             exit 1
         fi
     done
+    fi
 fi
 
-echo "[4/4] ENRO V2 terminali açılıyor..."
+if ((COOP)); then
+    echo "[4/4] ENRO iki oyunculu panel açılıyor..."
+else
+    echo "[4/4] ENRO V2 terminali açılıyor..."
+fi
 echo "============================================================"
-echo "GÖRSEL: Yalnız native Gazebo arayüzü"
-echo "LLM   : Ayrı terminal konuşması"
-if [[ "$SCENE" == "grasp-cell" ]]; then
+if ((COOP)); then
+    echo "GÖRSEL: Native Gazebo + iki oyunculu masaüstü paneli"
+    echo "LLM   : Panelden konuşma, görev önerisi ve çift onay"
+    echo "SKILL : Manuel sürüş + iptal edilebilir Nav2/kol/gripper + fiziksel doğrulama"
+elif [[ "$SCENE" == "grasp-cell" ]]; then
+    echo "GÖRSEL: Native Gazebo; LLM ayrı terminalde"
     echo "SKILL : /kavra ile gerçek kavrama + fiziksel lift testi"
 else
+    echo "GÖRSEL: Native Gazebo; LLM ayrı terminalde"
     echo "SKILL : /mavi, /yeşil, /kırmızı, /hepsi; orijinal Nav2 + fiziksel kol/gripper"
 fi
 echo "============================================================"
@@ -390,6 +412,7 @@ RUNTIME_ARGS=()
 RUNTIME_ARGS+=(--gpu-layers auto)
 
 ((RULES)) && GAME_ARGS+=(--backend rules)
+((COOP)) && GAME_ARGS+=(--coop)
 if [[ "$SCENE" == "grasp-cell" ]]; then
     GAME_ARGS+=(
         --simulation grasp-cell

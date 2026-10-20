@@ -17,3 +17,8 @@ backups/
 .idea/
 *.swp
 *~
+.env
+.env.*
+!.env.example
+*.pem
+*.key
